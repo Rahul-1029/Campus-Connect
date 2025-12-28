@@ -56,6 +56,9 @@ Authentication: Transitioning from PINs to MVGR Student Email (Single Sign-On).
 👨‍💻 Team Visionary Variables
 
 Rahul Attili (Team Leader)
+
 Jahnavi Damurthi
+
 Madhuri Darapureddy
+
 Bharath Raju Datla
