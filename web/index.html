@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base href="/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Campus Connect - MVGR Student Marketplace">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Campus Connect">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png" />
+
+  <title>Campus Connect</title>
+  <link rel="manifest" href="manifest.json">
+
+  <script src="flutter.js" defer></script>
+</head>
+
+<body>
+  <script>
+    window.addEventListener('load', function (ev) {
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: null, // Disables the slow service worker check
+        },
+        onEntrypointLoaded: function (engineInitializer) {
+          engineInitializer.initializeEngine({
+            renderer: "html", // Forces the fast HTML renderer to fix font errors
+          }).then(function (appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+  <script>
+    // Force screen refresh when keyboard hides
+    window.visualViewport.addEventListener('resize', () => {
+      if (window.visualViewport.height >= window.innerHeight * 0.9) {
+        window.scrollTo(0, 0);
+        document.body.style.height = '100vh';
+      }
+    });
+  </script>
+</body>
+
+</html>
