@@ -1,6 +1,6 @@
 🎓 Campus Connect
 Empowering Students through Peer-to-Peer Resource Sharing
-Built by Team Visionary Variables MVGR TechSprint 2024
+Built by Team Visionary Variables MVGR TechSprint 2025
 
 
 📖 Project Overview
