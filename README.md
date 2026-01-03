@@ -53,6 +53,11 @@ Location Tracking: Specifying which block or hostel the item is located in.
 Authentication: Transitioning from PINs to MVGR Student Email (Single Sign-On).
 
 
+Note :
+
+Currently, the platform operates on a high-trust model within the campus. In the next version, we plan to implement a verification to technically enforce exclusivity to MVGR students.
+
+
 👨‍💻 Team Visionary Variables
 
 Rahul Attili (Team Leader)
