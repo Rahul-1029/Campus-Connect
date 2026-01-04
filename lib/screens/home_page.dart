@@ -1,9 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// ignore: deprecated_member_use
 import 'dart:html' as html;
 import 'post_page.dart';
 
+// --- GLOBAL HELPER FUNCTIONS (Available to both pages) ---
+Color _getCategoryColor(String? category) {
+  switch (category) {
+    case 'Books':
+      return const Color(0xFFFFF7ED); // Soft Orange
+    case 'Electronics':
+      return const Color(0xFFEFF6FF); // Soft Blue
+    case 'Lab Coat':
+      return const Color(0xFFFDF2F8); // Soft Pink
+    case 'Tools':
+      return const Color(0xFFF0FDF4); // Soft Green
+    default:
+      return const Color(0xFFF8FAFC); // Soft Grey
+  }
+}
+
+Color _getIconColor(String? category) {
+  switch (category) {
+    case 'Books':
+      return Colors.orange;
+    case 'Electronics':
+      return Colors.blue;
+    case 'Lab Coat':
+      return Colors.pink;
+    case 'Tools':
+      return Colors.green;
+    default:
+      return Colors.grey;
+  }
+}
+
+IconData _getIconForCategory(String? category) {
+  switch (category) {
+    case 'Books':
+      return Icons.menu_book_rounded;
+    case 'Electronics':
+      return Icons.laptop_mac_rounded;
+    case 'Lab Coat':
+      return Icons.science_rounded;
+    case 'Tools':
+      return Icons.construction_rounded;
+    default:
+      return Icons.category_rounded;
+  }
+}
+
+String _timeAgo(Timestamp? timestamp) {
+  if (timestamp == null) return "Just now";
+  final diff = DateTime.now().difference(timestamp.toDate());
+  if (diff.inDays > 0) return "${diff.inDays}d ago";
+  if (diff.inHours > 0) return "${diff.inHours}h ago";
+  if (diff.inMinutes > 0) return "${diff.inMinutes}m ago";
+  return "Just now";
+}
+
+void _contactSeller(String phone, String title) {
+  String phoneNumber = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  if (!phoneNumber.startsWith('91')) phoneNumber = '91$phoneNumber';
+  String url =
+      "https://wa.me/$phoneNumber?text=Hi, I am interested in your item: $title";
+  html.window.open(url, '_blank');
+}
+
+// ======================= HOME PAGE =======================
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -22,72 +85,6 @@ class _HomePageState extends State<HomePage> {
     "Tools",
     "Other",
   ];
-
-  // --- 1. NEW: COLOR PALETTE HELPER ---
-  // Gives each category a distinct, soft pastel color
-  Color _getCategoryColor(String? category) {
-    switch (category) {
-      case 'Books':
-        return const Color(0xFFFFF7ED); // Soft Orange
-      case 'Electronics':
-        return const Color(0xFFEFF6FF); // Soft Blue
-      case 'Lab Coat':
-        return const Color(0xFFFDF2F8); // Soft Pink
-      case 'Tools':
-        return const Color(0xFFF0FDF4); // Soft Green
-      default:
-        return const Color(0xFFF8FAFC); // Soft Grey
-    }
-  }
-
-  // Gives the ICON a darker shade of the background
-  Color _getIconColor(String? category) {
-    switch (category) {
-      case 'Books':
-        return Colors.orange;
-      case 'Electronics':
-        return Colors.blue;
-      case 'Lab Coat':
-        return Colors.pink;
-      case 'Tools':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getIconForCategory(String? category) {
-    switch (category) {
-      case 'Books':
-        return Icons.menu_book_rounded;
-      case 'Electronics':
-        return Icons.laptop_mac_rounded;
-      case 'Lab Coat':
-        return Icons.science_rounded;
-      case 'Tools':
-        return Icons.construction_rounded;
-      default:
-        return Icons.category_rounded;
-    }
-  }
-
-  // ignore: unused_element
-  String _timeAgo(Timestamp? timestamp) {
-    if (timestamp == null) return "Just now";
-    final diff = DateTime.now().difference(timestamp.toDate());
-    if (diff.inDays > 0) return "${diff.inDays}d ago";
-    if (diff.inHours > 0) return "${diff.inHours}h ago";
-    if (diff.inMinutes > 0) return "${diff.inMinutes}m ago";
-    return "Just now";
-  }
-
-  void _contactSeller(String phone, String title) {
-    String phoneNumber = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    if (!phoneNumber.startsWith('91')) phoneNumber = '91$phoneNumber';
-    String url =
-        "https://wa.me/$phoneNumber?text=Hi, I am interested in your item: $title";
-    html.window.open(url, '_blank');
-  }
 
   void _showDeleteConfirmation(
     BuildContext context,
@@ -111,7 +108,6 @@ class _HomePageState extends State<HomePage> {
               decoration: const InputDecoration(
                 labelText: "PIN",
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock_outline),
               ),
             ),
           ],
@@ -152,17 +148,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA), // Clean off-white background
-      // --- 2. NEW: MODERN APP BAR ---
+      backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header Block
+            // HEADER
             Container(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               color: Colors.white,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -176,7 +170,6 @@ class _HomePageState extends State<HomePage> {
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
                               color: Colors.blue[900],
-                              letterSpacing: -0.5,
                             ),
                           ),
                           Text(
@@ -184,12 +177,10 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      // "Sell" Button is now a clean icon in the header
                       IconButton.filled(
                         onPressed: () => Navigator.push(
                           context,
@@ -200,13 +191,11 @@ class _HomePageState extends State<HomePage> {
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
                         ),
-                        tooltip: "Sell Item",
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // --- 3. NEW: FLOATING SEARCH BAR ---
+                  // SEARCH
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
@@ -227,8 +216,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 15),
-
-                  // --- 4. NEW: PILL CATEGORY SELECTOR ---
+                  // FILTERS
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -253,15 +241,6 @@ class _HomePageState extends State<HomePage> {
                                       ? Colors.black
                                       : Colors.grey.shade300,
                                 ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ]
-                                    : [],
                               ),
                               child: Text(
                                 category,
@@ -270,7 +249,6 @@ class _HomePageState extends State<HomePage> {
                                       ? Colors.white
                                       : Colors.black,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -282,8 +260,7 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-
-            // --- 5. NEW: IMMERSIVE GRID ---
+            // GRID
             Expanded(
               child: StreamBuilder(
                 stream: FirebaseFirestore.instance
@@ -293,67 +270,53 @@ class _HomePageState extends State<HomePage> {
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (!snapshot.hasData)
                     return const Center(child: CircularProgressIndicator());
-
                   var docs = snapshot.data!.docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final title = data['title'].toString().toLowerCase();
                     final category = data['category'] ?? "Other";
-                    final matchesSearch = title.contains(searchQuery);
-                    final matchesCategory =
-                        selectedCategory == "All" ||
-                        category == selectedCategory;
-                    return matchesSearch && matchesCategory;
+                    return title.contains(searchQuery) &&
+                        (selectedCategory == "All" ||
+                            category == selectedCategory);
                   }).toList();
 
-                  if (docs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 80,
-                            color: Colors.grey[200],
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            "No items found",
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                  if (docs.isEmpty)
+                    return const Center(child: Text("No items found"));
 
                   return GridView.builder(
                     padding: const EdgeInsets.all(20),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio:
-                              0.70, // Taller cards for modern look
+                          childAspectRatio: 0.70,
                           crossAxisSpacing: 15,
                           mainAxisSpacing: 15,
                         ),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       var data = docs[index].data() as Map<String, dynamic>;
+
+                      // --- GRID ITEM CARD ---
                       return GestureDetector(
                         onLongPress: () => _showDeleteConfirmation(
                           context,
                           data['deletePin'],
                           docs[index].id,
                         ),
+                        // NEW: ON TAP -> OPEN DETAILS PAGE
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProductDetailsPage(data: data),
+                            ),
+                          );
+                        },
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                // ignore: deprecated_member_use
                                 color: Colors.grey.withOpacity(0.1),
                                 blurRadius: 15,
                                 offset: const Offset(0, 5),
@@ -363,7 +326,6 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // TOP HALF: COLORFUL ICON BACKGROUND
                               Expanded(
                                 flex: 3,
                                 child: Container(
@@ -383,8 +345,6 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                               ),
-
-                              // BOTTOM HALF: DETAILS
                               Expanded(
                                 flex: 4,
                                 child: Padding(
@@ -400,13 +360,11 @@ class _HomePageState extends State<HomePage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            data['category']?.toUpperCase() ??
-                                                "ITEM",
+                                            data['category'] ?? "ITEM",
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.grey[400],
-                                              letterSpacing: 1,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
@@ -417,12 +375,10 @@ class _HomePageState extends State<HomePage> {
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 16,
-                                              height: 1.2,
                                             ),
                                           ),
                                         ],
                                       ),
-
                                       Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
@@ -434,7 +390,7 @@ class _HomePageState extends State<HomePage> {
                                               fontSize: 18,
                                             ),
                                           ),
-                                          // Whatsapp Mini Button
+                                          // Keep Mini-Button for quick access
                                           GestureDetector(
                                             onTap: () => _contactSeller(
                                               data['contact'],
@@ -442,21 +398,9 @@ class _HomePageState extends State<HomePage> {
                                             ),
                                             child: Container(
                                               padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: const Color(
-                                                  0xFF25D366,
-                                                ), // WhatsApp Green
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF25D366),
                                                 shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: const Color(
-                                                      0xFF25D366,
-                                                    // ignore: deprecated_member_use
-                                                    ).withOpacity(0.4),
-                                                    blurRadius: 8,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
                                               ),
                                               child: const Icon(
                                                 Icons.chat_bubble,
@@ -481,6 +425,212 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ======================= NEW: PRODUCT DETAILS PAGE =======================
+class ProductDetailsPage extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const ProductDetailsPage({super.key, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final category = data['category'] ?? "Other";
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: _getCategoryColor(category),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          category,
+          style: TextStyle(
+            color: _getIconColor(category),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. HERO HEADER
+            Container(
+              height: 200,
+              color: _getCategoryColor(category),
+              child: Center(
+                child: Icon(
+                  _getIconForCategory(category),
+                  size: 100,
+                  color: _getIconColor(category),
+                ),
+              ),
+            ),
+
+            // 2. CONTENT
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _timeAgo(data['timestamp']),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.verified,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Verified Student",
+                              style: TextStyle(
+                                color: Colors.blue[800],
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+
+                  // TITLE & PRICE
+                  Text(
+                    data['title'],
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "₹${data['price']}",
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                  const Divider(),
+                  const SizedBox(height: 20),
+
+                  // DESCRIPTION SECTION
+                  const Text(
+                    "Description",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    data['description'] ?? "No description provided.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[800],
+                      height: 1.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 20),
+
+                  // SELLER INFO
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.grey[200],
+                        radius: 25,
+                        child: Text(
+                          data['seller'][0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Sold by ${data['seller']}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const Text(
+                            "MVGR Campus",
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // 3. BOTTOM ACTION BAR
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF25D366),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+          onPressed: () => _contactSeller(data['contact'], data['title']),
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: const Text(
+            "Chat on WhatsApp",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );

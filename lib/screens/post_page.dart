@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
+import 'dart:convert'; // For JSON
+import 'package:http/http.dart' as http; // For Direct API Call
+import '../api_key.dart'; // Keep your key file!
 
 class PostPage extends StatefulWidget {
   const PostPage({super.key});
@@ -17,9 +20,13 @@ class _PostPageState extends State<PostPage> {
   final nameController = TextEditingController();
   final pinController = TextEditingController();
   final emailController = TextEditingController();
+
+  // --- 1. RESTORED DESCRIPTION CONTROLLER ---
+  final descriptionController = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
 
-  // CATEGORY SETUP
+  // Categories (No Drafters)
   String selectedCategory = "Books";
   final List<String> categories = [
     "Books",
@@ -30,6 +37,7 @@ class _PostPageState extends State<PostPage> {
   ];
 
   bool _isVerifying = false;
+  bool _isGeneratingAI = false; // Spinner for AI
   Timer? _timer;
 
   @override
@@ -38,26 +46,79 @@ class _PostPageState extends State<PostPage> {
     super.dispose();
   }
 
-  // --- THE REAL EMAIL VERIFICATION LOGIC ---
+  // --- 2. THE DIRECT HTTP AI LOGIC (Reliable & Simple) ---
+  Future<void> _generateDescription() async {
+    if (titleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a Title first!")),
+      );
+      return;
+    }
+
+    setState(() => _isGeneratingAI = true);
+
+    try {
+      // Clean key and prepare URL
+      final cleanKey = geminiApiKey.trim();
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$cleanKey',
+      );
+
+      // The Prompt
+      final headers = {'Content-Type': 'application/json'};
+      final body = jsonEncode({
+        "contents": [
+          {
+            "parts": [
+              {
+                "text":
+                    "Write a short, catchy, 2-sentence sales description for a used '${titleController.text}' in the category '$selectedCategory' being sold by a student to another student. Be informal and persuasive.",
+              },
+            ],
+          },
+        ],
+      });
+
+      // The Call
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final aiText = data['candidates'][0]['content']['parts'][0]['text'];
+
+        setState(() {
+          descriptionController.text = aiText;
+          _isGeneratingAI = false;
+        });
+      } else {
+        print("Google Error: ${response.body}");
+        throw Exception("Failed to generate description");
+      }
+    } catch (e) {
+      setState(() => _isGeneratingAI = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("AI Error: ${e.toString()}")));
+    }
+  }
+
+  // --- EXISTING VERIFICATION LOGIC ---
   Future<void> _handlePost() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isVerifying = true);
-
     final email = emailController.text.trim();
     final pin = pinController.text.trim();
-    final password = "mvgr$pin"; // Create a secure password from their PIN
+    final password = "mvgr$pin";
 
     try {
       User? user;
       try {
-        // Try to create a new user
         UserCredential cred = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(email: email, password: password);
         user = cred.user;
       } on FirebaseAuthException catch (e) {
         if (e.code == 'email-already-in-use') {
-          // If user exists, log them in
           UserCredential cred = await FirebaseAuth.instance
               .signInWithEmailAndPassword(email: email, password: password);
           user = cred.user;
@@ -71,7 +132,6 @@ class _PostPageState extends State<PostPage> {
           await user.sendEmailVerification();
           _showVerificationDialog(user);
         } else {
-          // If they verified in a previous session, just post immediately
           _uploadData();
         }
       }
@@ -94,17 +154,9 @@ class _PostPageState extends State<PostPage> {
           children: [
             const Icon(Icons.mark_email_unread, size: 50, color: Colors.blue),
             const SizedBox(height: 10),
-            Text(
-              "Verification link sent to:\n${user.email}",
-              textAlign: TextAlign.center,
-            ),
+            Text("Link sent to:\n${user.email}", textAlign: TextAlign.center),
             const SizedBox(height: 15),
             const LinearProgressIndicator(),
-            const SizedBox(height: 10),
-            const Text(
-              "Please click the link in your inbox...",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
           ],
         ),
         actions: [
@@ -120,13 +172,12 @@ class _PostPageState extends State<PostPage> {
       ),
     );
 
-    // Poll every 3 seconds to check if they clicked the link
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       await user.reload();
       if (FirebaseAuth.instance.currentUser?.emailVerified ?? false) {
         timer.cancel();
-        Navigator.pop(context); // Close dialog
-        _uploadData(); // Proceed to upload
+        Navigator.pop(context);
+        _uploadData();
       }
     });
   }
@@ -134,12 +185,13 @@ class _PostPageState extends State<PostPage> {
   Future<void> _uploadData() async {
     await FirebaseFirestore.instance.collection('listings').add({
       'title': titleController.text,
+      'description': descriptionController.text, // --- SAVING DESCRIPTION ---
       'price': priceController.text,
       'contact': contactController.text,
       'seller': nameController.text,
       'email': emailController.text,
       'deletePin': pinController.text,
-      'category': selectedCategory, // SAVING CATEGORY
+      'category': selectedCategory,
       'isVerified': true,
       'timestamp': FieldValue.serverTimestamp(),
     });
@@ -162,7 +214,7 @@ class _PostPageState extends State<PostPage> {
           key: _formKey,
           child: Column(
             children: [
-              // EMAIL FIELD (With @mvgrce.edu.in Check)
+              // EMAIL
               TextFormField(
                 controller: emailController,
                 decoration: const InputDecoration(
@@ -171,11 +223,13 @@ class _PostPageState extends State<PostPage> {
                   prefixIcon: Icon(Icons.school),
                   border: OutlineInputBorder(),
                 ),
-                keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Required';
-                  if (!value.toLowerCase().trim().endsWith('@mvgrce.edu.in')) {
-                    return 'Must use @mvgrce.edu.in email';
+                  final email = value.toLowerCase().trim();
+                  // Allow Gmail for testing + College Mail
+                  if (!email.endsWith('@gmail.com') &&
+                      !email.endsWith('@mvgrce.edu.in')) {
+                    return 'Use @gmail.com or @mvgrce.edu.in';
                   }
                   return null;
                 },
@@ -193,9 +247,8 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 10),
 
-              // CATEGORY DROPDOWN
+              // CATEGORY
               DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
                 value: selectedCategory,
                 decoration: const InputDecoration(
                   labelText: "Category",
@@ -209,14 +262,62 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 10),
 
-              // TITLE
+              // --- 3. TITLE & AI BUTTON ---
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: "Item Title",
+                        prefixIcon: Icon(Icons.book),
+                      ),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // AI BUTTON (Direct HTTP)
+                  SizedBox(
+                    height: 55,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade50,
+                        foregroundColor: Colors.purple,
+                        elevation: 0,
+                        side: BorderSide(color: Colors.purple.shade100),
+                      ),
+                      onPressed: _isGeneratingAI ? null : _generateDescription,
+                      icon: _isGeneratingAI
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      label: const Text("AI Write"),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // --- 4. DESCRIPTION FIELD ---
               TextFormField(
-                controller: titleController,
+                controller: descriptionController,
+                maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: "Item Title",
-                  prefixIcon: Icon(Icons.book),
+                  labelText: "Description (Auto-filled by AI)",
+                  alignLabelWithHint: true,
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(bottom: 40),
+                    child: Icon(Icons.description),
+                  ),
+                  border: OutlineInputBorder(),
                 ),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) =>
+                    v!.isEmpty ? 'Please add a description' : null,
               ),
               const SizedBox(height: 10),
 
@@ -258,7 +359,7 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 20),
 
-              // BUTTON
+              // SUBMIT BUTTON
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
