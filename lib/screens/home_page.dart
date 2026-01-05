@@ -147,6 +147,27 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Get Screen Width
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    // 2. Decide Column Count (What you already did)
+    int crossAxisCount = screenWidth > 1200
+        ? 5
+        : screenWidth > 900
+        ? 4
+        : screenWidth > 600
+        ? 3
+        : 2;
+
+    // 3. Decide Aspect Ratio (The "Squash" Fix)
+    // Mobile = 0.70 (Tall Card). PC = 0.85 (Shorter, squarer Card).
+    double aspectRatio = screenWidth > 600 ? 0.85 : 0.70;
+
+    // 4. Decide Section Size (The "Gap" Fix)
+    // Mobile: Image 3 parts, Text 4 parts (Text needs room).
+    // PC: Image 4 parts, Text 3 parts (Text has plenty of width, so reduce height to close gap).
+    int imageFlex = screenWidth > 600 ? 4 : 3;
+    int textFlex = screenWidth > 600 ? 3 : 4;
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
@@ -286,13 +307,13 @@ class _HomePageState extends State<HomePage> {
 
                   return GridView.builder(
                     padding: const EdgeInsets.all(20),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.70,
-                          crossAxisSpacing: 15,
-                          mainAxisSpacing: 15,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      childAspectRatio:
+                          aspectRatio,
+                      crossAxisSpacing: 15,
+                      mainAxisSpacing: 15,
+                    ),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       var data = docs[index].data() as Map<String, dynamic>;
@@ -328,8 +349,10 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // TOP HALF: ICON BACKGROUND
                               Expanded(
-                                flex: 3,
+                                flex:
+                                    imageFlex, // <--- CHANGED from 3 to variable
                                 child: Container(
                                   width: double.infinity,
                                   decoration: BoxDecoration(
@@ -348,7 +371,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               Expanded(
-                                flex: 4,
+                                flex: textFlex,
                                 child: Padding(
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
