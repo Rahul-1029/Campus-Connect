@@ -61,7 +61,7 @@ class _PostPageState extends State<PostPage> {
       // Clean key and prepare URL
       final cleanKey = geminiApiKey.trim();
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$cleanKey',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=$cleanKey',
       );
 
       // The Prompt
@@ -123,7 +123,7 @@ class _PostPageState extends State<PostPage> {
               .signInWithEmailAndPassword(email: email, password: password);
           user = cred.user;
         } else {
-          throw e;
+          rethrow;
         }
       }
 
@@ -249,7 +249,7 @@ class _PostPageState extends State<PostPage> {
 
               // CATEGORY
               DropdownButtonFormField<String>(
-                value: selectedCategory,
+                initialValue: selectedCategory,
                 decoration: const InputDecoration(
                   labelText: "Category",
                   prefixIcon: Icon(Icons.category),

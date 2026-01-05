@@ -268,8 +268,9 @@ class _HomePageState extends State<HomePage> {
                     .orderBy('timestamp', descending: true)
                     .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (!snapshot.hasData)
+                  if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
+                  }
                   var docs = snapshot.data!.docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final title = data['title'].toString().toLowerCase();
@@ -279,8 +280,9 @@ class _HomePageState extends State<HomePage> {
                             category == selectedCategory);
                   }).toList();
 
-                  if (docs.isEmpty)
+                  if (docs.isEmpty) {
                     return const Center(child: Text("No items found"));
+                  }
 
                   return GridView.builder(
                     padding: const EdgeInsets.all(20),
