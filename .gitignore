@@ -44,5 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Secrets (Google API Key)
+# Secrets
 lib/api_key.dart
+lib/firebase_options.dart
