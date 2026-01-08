@@ -1,89 +1,93 @@
-# 🎓 Campus Connect
-### The All-in-One Smart Marketplace & Lost & Found for MVGR Students
+# Campus Connect 🎓
 
-**Campus Connect** is a hyper-local platform designed exclusively for **MVGR College of Engineering**. It unifies two critical campus needs: a secure **Peer-to-Peer Marketplace** for academic resources and a rapid-response **Lost & Found Network**—all within a single, beautifully designed app.
+**Campus Connect** is a dedicated student marketplace and utility app designed for **MVGR College of Engineering**. It serves as a unified platform for students to buy/sell items, report lost belongings, and exchange books within the campus community.
 
----
+## 🚀 Features
 
-## 🚀 Built for MVGR Hackathon (Offline Round)
-**Team:** Visionary Variables  
-**Status:** 🟢 LIVE (Offline Mode Ready)
+### 1. Student Marketplace 🛒
+* **Buy & Sell:** Students can list items like books, electronics, lab coats, and tools.
+* **Category Filtering:** Filter items by category (Books, Electronics, Lab Coat, etc.).
+* **Direct WhatsApp Integration:** Buyers can chat with sellers directly via WhatsApp with a single click.
+* **Secure Deletion:** Sellers create a unique 4-digit PIN to delete their posts after a sale.
 
----
+### 2. Lost & Found Report 🔍
+* **Dedicated Section:** A distinct UI designed to look like "Urgent Sticky Notes" to grab attention.
+* **Location Tracking:** Reports include a "Last Seen" location field.
+* **One-Tap Claim:** Finders can click "I Found This Item" to instantly notify the owner via WhatsApp.
 
-## 🚩 The Problem
-1.  **The Resource Gap:** Students spend thousands on temporary items (Aprons, books) while seniors struggle to sell them. OLX is too broad; WhatsApp groups are too chaotic.
-2.  **The "Lost Item" Chaos:** When a student loses an ID card or wallet, they spam random WhatsApp groups. There is no central, searchable database for lost items on campus.
+### 3. Book Exchange Hub 📚
+* **Library Card Aesthetics:** A beautiful, custom-designed UI for book trading.
+* **Trade Requests:** Instead of prices, users specify what they want in return (e.g., "Trading 'Data Structures' for 'Python Crash Course'").
+* **Optimized for Students:** Encourages a cashless, knowledge-sharing economy.
 
-## 💡 The Solution
-A **Dual-Mode Application** that adapts to the user's intent:
-* **🔵 Market Mode:** A clean, AI-powered store for buying/selling.
-* **🔴 Alert Mode:** A high-visibility "Red Zone" for reporting and recovering lost items instantly.
+### 4. AI-Powered Assistant ✨
+* **Auto-Descriptions:** Integrated with the **Gemini 2.5 Flash Lite API**.
+* **Smart Writing:** Users can type a title (e.g., "Scientific Calculator") and click **"AI Write"** to generate a catchy, persuasive sales pitch or exchange description automatically.
 
----
-
-## ✨ Key Features
-
-### 🔄 1. Dual-Mode Interface (Innovative UI)
-* **One-Tap Toggle:** Instantly switch the entire app environment.
-    * **Marketplace (Blue/White):** Calm, clean aesthetic for browsing products.
-    * **Lost & Found (Red/Alert):** Urgent, high-contrast "Sticky Note" design with watermark alerts for lost items.
-
-### 📢 2. The Lost & Found Network (NEW)
-* **Sticky Note Alerts:** Lost items are displayed as digital "sticky notes" with visual watermarks, making them impossible to miss.
-* **Smart "Found It" Action:** One click connects the finder to the owner via WhatsApp with a pre-filled message: *"I found your Blue Wallet..."*
-* **Secure Deletion:** Posters set a **4-digit PIN** to securely delete the post once the item is recovered.
-
-### 🤖 3. AI-Powered Listings (Powered by Gemini)
-* **Zero-Typing Selling:** Users just type a title (e.g., "Engineering Physics"), click **"✨ AI Write"**, and Google Gemini generates a persuasive sales pitch automatically.
-
-### 🔐 4. Campus-Exclusive Security
-* **Verified Ecosystem:** Email domain checks ensure only `@mvgrce.edu.in` students can access the platform.
-* **Privacy First:** Phone numbers are protected behind the "Chat" button; no public exposure until necessary.
+### 5. Verification & Security 🔐
+* **College Email Verification:** Ensures only verified students (using `@mvgrce.edu.in` or permitted domains) can post.
+* **PIN Protection:** Every post is secured with a user-defined PIN to prevent unauthorized deletions.
 
 ---
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** Flutter (Responsive Mobile & Web)
-* **Backend:** Firebase Cloud Firestore (Dual Collections: `listings` & `lost_found`)
-* **Auth:** Firebase Authentication (Email/Google)
-* **AI:** Google Gemini API (Content Generation)
-* **State Management:** Native State (Performance Optimized)
+* **Frontend:** Flutter (Dart)
+* **Backend:** Firebase Firestore (NoSQL Database)
+* **Authentication:** Firebase Auth (Email Link Verification)
+* **AI Integration:** Google Gemini API (REST HTTP implementation)
+* **State Management:** `setState` (Clean & efficient for this scale)
 
 ---
 
-## 🚀 How to Run (Offline / Judge's Demo)
+## 📂 Project Structure
 
-Since this project uses secure keys, follow these steps to run it locally:
+* `lib/main.dart`: Entry point and Firebase initialization.
+* `lib/home_page.dart`: The core dashboard containing the **Three-Mode Toggle** (Market, Lost, Exchange) and the dynamic GridView.
+* `lib/post_page.dart`: Form for selling items with AI description generation.
+* `lib/exchange_post_page.dart`: Specialized form for the Book Exchange feature.
+* `lib/report_lost_page.dart`: Form for reporting lost items.
+* `lib/api_key.dart`: Secure storage for the Gemini API key.
 
-1.  **Clone the Repo:**
+---
+
+## ⚙️ Installation & Setup
+
+1.  **Clone the Repository**
     ```bash
-    git clone [https://github.com/rahul-attili/campus-connect.git](https://github.com/rahul-attili/campus-connect.git)
+    git clone [https://github.com/your-username/campus-connect.git](https://github.com/your-username/campus-connect.git)
     cd campus-connect
     ```
 
-2.  **Install Dependencies:**
-    * *Note: If offline, ensure you have the Flutter cache on your machine.*
+2.  **Install Dependencies**
     ```bash
     flutter pub get
     ```
 
-3.  **🔑 Configure Secrets (Crucial):**
-    Create a file named `lib/api_key.dart` and add the following:
-    ```dart
-    const String geminiApiKey = "YOUR_GEMINI_API_KEY";
-    ```
+3.  **Firebase Setup**
+    * Create a project in the Firebase Console.
+    * Add your `google-services.json` (Android) or `GoogleService-Info.plist` (iOS) to the respective folders.
+    * Enable **Authentication** (Email/Password) and **Firestore Database**.
 
-4.  **Run the App:**
-    * **For Web (Recommended for Demo):**
-        ```bash
-        flutter run -d chrome
+4.  **API Key Configuration**
+    * Get your API key from Google AI Studio.
+    * Create a file `lib/api_key.dart`:
+        ```dart
+        const String geminiApiKey = "YOUR_API_KEY_HERE";
         ```
+
+5.  **Run the App**
+    ```bash
+    flutter run
+    ```
 
 ---
 
-### 👨‍💻 Team: Visionary Variables
-* **Lead:** Rahul Attili
-* **Role:** Full Stack Dev & UI/UX
-* *Built with ❤️ in MVGR.*
+## 🤝 Contribution
+
+This project is built by **Visionary Variables** for the MVGR student community.
+**Team Lead:** Rahul Attili
+
+---
+
+*“Pass the knowledge, not the cost.”*

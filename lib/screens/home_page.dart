@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:html' as html;
 import 'post_page.dart';
 import 'report_lost_page.dart';
+import 'exchange_post_page.dart';
 
 // --- GLOBAL HELPER FUNCTIONS ---
 Color _getCategoryColor(String? category) {
@@ -68,7 +69,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String searchQuery = "";
   String selectedCategory = "All";
-  bool showLostAndFound = false;
+  int _viewMode = 0; // 0 = Market, 1 = Lost, 2 = Exchange
 
   final List<String> categories = [
     "All",
@@ -79,7 +80,6 @@ class _HomePageState extends State<HomePage> {
     "Other",
   ];
 
-  // DELETE FUNCTION (Works for both Market and Lost Items)
   void _showDeleteConfirmation(
     BuildContext context,
     String correctPin,
@@ -152,21 +152,58 @@ class _HomePageState extends State<HomePage> {
         : 2;
     double aspectRatio = screenWidth > 600 ? 0.85 : 0.70;
 
-    // Adjust flex for PC vs Mobile
     int imageFlex = screenWidth > 600 ? 4 : 3;
     int textFlex = screenWidth > 600 ? 3 : 4;
 
+    Color fabColor;
+    String fabLabel;
+    IconData fabIcon;
+    Stream<QuerySnapshot> currentStream;
+    String collectionName;
+
+    if (_viewMode == 1) {
+      fabColor = Colors.redAccent;
+      fabLabel = "Report Lost";
+      fabIcon = Icons.campaign;
+      collectionName = 'lost_found';
+      currentStream = FirebaseFirestore.instance
+          .collection('lost_found')
+          .orderBy('timestamp', descending: true)
+          .snapshots();
+    } else if (_viewMode == 2) {
+      fabColor = Colors.teal;
+      fabLabel = "Exchange Book";
+      fabIcon = Icons.swap_horiz_rounded;
+      collectionName = 'book_exchange';
+      currentStream = FirebaseFirestore.instance
+          .collection('book_exchange')
+          .orderBy('timestamp', descending: true)
+          .snapshots();
+    } else {
+      fabColor = Colors.black;
+      fabLabel = "Sell Item";
+      fabIcon = Icons.add;
+      collectionName = 'listings';
+      currentStream = FirebaseFirestore.instance
+          .collection('listings')
+          .orderBy('timestamp', descending: true)
+          .snapshots();
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-
-      // FLOATING BUTTON: Changes based on Toggle
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: showLostAndFound ? Colors.redAccent : Colors.black,
+        backgroundColor: fabColor,
         onPressed: () {
-          if (showLostAndFound) {
+          if (_viewMode == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ReportLostPage()),
+            );
+          } else if (_viewMode == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ExchangePostPage()),
             );
           } else {
             Navigator.push(
@@ -175,10 +212,9 @@ class _HomePageState extends State<HomePage> {
             );
           }
         },
-        label: Text(showLostAndFound ? "Report Lost" : "Sell Item"),
-        icon: Icon(showLostAndFound ? Icons.campaign : Icons.add),
+        label: Text(fabLabel),
+        icon: Icon(fabIcon),
       ),
-
       body: SafeArea(
         child: Column(
           children: [
@@ -191,7 +227,6 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // LEFT SIDE: TITLE
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -238,10 +273,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-
                       GestureDetector(
                         onTap: () {
-                          // "About Us" popup
                           showDialog(
                             context: context,
                             builder: (_) => AlertDialog(
@@ -259,9 +292,7 @@ class _HomePageState extends State<HomePage> {
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.all(
-                            2,
-                          ), // White border effect
+                          padding: const EdgeInsets.all(2),
                           decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -279,8 +310,6 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // NEW TOGGLE SWITCH (Market vs Lost & Found)
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
@@ -288,66 +317,13 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () =>
-                                setState(() => showLostAndFound = false),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: !showLostAndFound
-                                    ? Colors.blue[900]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Marketplace",
-                                  style: TextStyle(
-                                    color: !showLostAndFound
-                                        ? Colors.white
-                                        : Colors.grey,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () =>
-                                setState(() => showLostAndFound = true),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: showLostAndFound
-                                    ? Colors.redAccent
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  "Lost & Found",
-                                  style: TextStyle(
-                                    color: showLostAndFound
-                                        ? Colors.white
-                                        : Colors.grey,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        _buildToggleButton("Market", 0),
+                        _buildToggleButton("Lost", 1),
+                        _buildToggleButton("Exchange", 2),
                       ],
                     ),
                   ),
                   const SizedBox(height: 15),
-
-                  // SEARCH
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
@@ -368,9 +344,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 15),
-
-                  // FILTERS (Only show if NOT in Lost mode)
-                  if (!showLostAndFound)
+                  if (_viewMode == 0)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -416,21 +390,9 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-
-            // GRID CONTENT
             Expanded(
               child: StreamBuilder(
-                // SWITCH STREAMS BASED ON TOGGLE
-                stream: showLostAndFound
-                    ? FirebaseFirestore.instance
-                          .collection('lost_found')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots()
-                    : FirebaseFirestore.instance
-                          .collection('listings')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots(),
-
+                stream: currentStream,
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (!snapshot.hasData)
                     return const Center(child: CircularProgressIndicator());
@@ -438,9 +400,7 @@ class _HomePageState extends State<HomePage> {
                   var docs = snapshot.data!.docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final title = data['title'].toString().toLowerCase();
-                    // If in Lost mode, ignore category filter
-                    if (showLostAndFound) return title.contains(searchQuery);
-
+                    if (_viewMode != 0) return title.contains(searchQuery);
                     final category = data['category'] ?? "Other";
                     return title.contains(searchQuery) &&
                         (selectedCategory == "All" ||
@@ -462,33 +422,28 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (context, index) {
                       var data = docs[index].data() as Map<String, dynamic>;
 
-                      // === OPTION A: LOST & FOUND CARD (Updated Design) ===
-                      if (showLostAndFound) {
+                      // === 1. LOST & FOUND CARD ===
+                      if (_viewMode == 1) {
                         return GestureDetector(
                           onLongPress: () => _showDeleteConfirmation(
                             context,
                             data['deletePin'],
                             docs[index].id,
-                            'lost_found',
+                            collectionName,
                           ),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ProductDetailsPage(
-                                  data: data,
-                                  isLostItem: true,
-                                ), // Sending a flag!
+                                builder: (_) =>
+                                    ProductDetailsPage(data: data, mode: 1),
                               ),
                             );
                           },
                           child: Container(
-                            clipBehavior: Clip
-                                .hardEdge, // cuts off the watermark if it overflows
+                            clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFFEF2F2,
-                              ), // Very light red (Sticky note feel)
+                              color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: Colors.red.shade100,
@@ -504,7 +459,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: Stack(
                               children: [
-                                // 1. WATERMARK ICON
                                 Positioned(
                                   right: -10,
                                   bottom: -10,
@@ -517,113 +471,66 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   ),
                                 ),
-
-                                // 2. TEXT CONTENT
                                 Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // LOCATION BADGE
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.pin_drop,
-                                                  size: 12,
-                                                  color: Colors.redAccent,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    data['location'] ??
-                                                        "Unknown",
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: Colors.redAccent,
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          const SizedBox(height: 10),
-
-                                          // TITLE
-                                          Text(
-                                            data['title'],
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 18,
-                                              color: Color(0xFF7F1D1D),
-                                            ),
-                                          ),
-
-                                          const SizedBox(height: 6),
-
-                                          // DESCRIPTION
-                                          Text(
-                                            data['description'] ??
-                                                "No details provided.",
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.red[900],
-                                              height: 1.3,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 15),
-
-                                      // BUTTON
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: Colors.redAccent,
-                                            elevation: 0,
-                                            side: const BorderSide(
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.pin_drop,
+                                              size: 12,
                                               color: Colors.redAccent,
                                             ),
-                                            minimumSize: const Size(0, 36),
-                                          ),
-                                          onPressed: () => _contactSeller(
-                                            data['contact'],
-                                            "I found your item: ${data['title']}",
-                                          ),
-                                          icon: const Icon(
-                                            Icons.check,
-                                            size: 16,
-                                          ),
-                                          label: const Text("I Found It"),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                data['location'] ?? "Unknown",
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.redAccent,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        data['title'],
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 18,
+                                          color: Color(0xFF7F1D1D),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        data['description'] ?? "No details.",
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.red[900],
                                         ),
                                       ),
                                     ],
@@ -635,19 +542,186 @@ class _HomePageState extends State<HomePage> {
                         );
                       }
 
-                      // === OPTION B: MARKET CARD (Your existing Beautiful UI) ===
+                      // === 2. BOOK EXCHANGE CARD (Updated Design) ===
+                      if (_viewMode == 2) {
+                        return GestureDetector(
+                          onLongPress: () => _showDeleteConfirmation(
+                            context,
+                            data['deletePin'],
+                            docs[index].id,
+                            collectionName,
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ProductDetailsPage(data: data, mode: 2),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            clipBehavior: Clip.hardEdge,
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFF0FDF4,
+                              ), // Teal/Green background
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.teal.shade100,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.teal.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                // BACKGROUND WATERMARK (Fills space)
+                                Positioned(
+                                  right: -20,
+                                  top: 40,
+                                  child: Transform.rotate(
+                                    angle: -0.2,
+                                    child: Icon(
+                                      Icons.auto_stories_rounded,
+                                      size: 140, // Huge icon
+                                      color: Colors.teal.withOpacity(0.15),
+                                    ),
+                                  ),
+                                ),
+
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // 1. TOP BADGE
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal[800],
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "EXCHANGE",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ),
+                                      const Spacer(flex: 1),
+
+                                      // 2. BIG SERIF TITLE
+                                      Text(
+                                        data['title'],
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontFamily:
+                                              'Serif', // Looks more like a book
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 22, // Larger font
+                                          color: Colors.teal[900],
+                                          height: 1.1,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // 3. AUTHOR (Italic)
+                                      Text(
+                                        "by ${data['author'] ?? 'Unknown'}",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 13,
+                                          color: Colors.teal[700],
+                                        ),
+                                      ),
+                                      const Spacer(flex: 2),
+
+                                      // 4. "WANTS" BOX (Sticky note style)
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.teal.withOpacity(
+                                                0.1,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "TRADE FOR:",
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              data['exchange_with'] ?? "?",
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.teal[800],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      // === 3. MARKET CARD ===
                       return GestureDetector(
                         onLongPress: () => _showDeleteConfirmation(
                           context,
                           data['deletePin'],
                           docs[index].id,
-                          'listings',
+                          collectionName,
                         ),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ProductDetailsPage(data: data),
+                              builder: (_) =>
+                                  ProductDetailsPage(data: data, mode: 0),
                             ),
                           );
                         },
@@ -666,7 +740,6 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // TOP HALF: ICON
                               Expanded(
                                 flex: imageFlex,
                                 child: Container(
@@ -686,7 +759,6 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                               ),
-                              // BOTTOM HALF: INFO
                               Expanded(
                                 flex: textFlex,
                                 child: Padding(
@@ -735,7 +807,7 @@ class _HomePageState extends State<HomePage> {
                                           GestureDetector(
                                             onTap: () => _contactSeller(
                                               data['contact'],
-                                              "Hi, I am interested in your item: ${data['title']}",
+                                              "Hi, I am interested in: ${data['title']}",
                                             ),
                                             child: Container(
                                               padding: const EdgeInsets.all(8),
@@ -770,69 +842,100 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildToggleButton(String text, int index) {
+    bool isActive = _viewMode == index;
+    Color activeColor;
+    if (index == 0)
+      activeColor = Colors.blue[900]!;
+    else if (index == 1)
+      activeColor = Colors.redAccent;
+    else
+      activeColor = Colors.teal;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _viewMode = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ======================= PRODUCT DETAILS PAGE =======================
 class ProductDetailsPage extends StatelessWidget {
   final Map<String, dynamic> data;
-  final bool isLostItem;
+  final int mode;
 
-  const ProductDetailsPage({
-    super.key,
-    required this.data,
-    this.isLostItem = false,
-  });
+  const ProductDetailsPage({super.key, required this.data, required this.mode});
 
   String _timeAgo(Timestamp? timestamp) {
     if (timestamp == null) return "Just now";
     DateTime date = timestamp.toDate();
     Duration diff = DateTime.now().difference(date);
-
-    if (diff.inDays > 7) {
-      return "${date.day}/${date.month}/${date.year}";
-    } else if (diff.inDays >= 1) {
-      return "${diff.inDays} days ago";
-    } else if (diff.inHours >= 1) {
-      return "${diff.inHours} hours ago";
-    } else if (diff.inMinutes >= 1) {
-      return "${diff.inMinutes} mins ago";
-    } else {
-      return "Just now";
-    }
+    if (diff.inDays > 7) return "${date.day}/${date.month}/${date.year}";
+    if (diff.inDays >= 1) return "${diff.inDays} days ago";
+    if (diff.inHours >= 1) return "${diff.inHours} hours ago";
+    if (diff.inMinutes >= 1) return "${diff.inMinutes} mins ago";
+    return "Just now";
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. DYNAMIC THEME (Red for Lost, Category Color for Market)
-    final category = isLostItem
-        ? "Lost & Found"
-        : (data['category'] ?? "Other");
-    final themeColor = isLostItem
-        ? Colors.redAccent
-        : _getCategoryColor(category);
-    final iconColor = isLostItem ? Colors.white : _getIconColor(category);
-    final mainIcon = isLostItem
-        ? Icons.campaign_rounded
-        : _getIconForCategory(category);
+    Color themeColor;
+    IconData mainIcon;
+    String headerTitle;
+
+    if (mode == 1) {
+      themeColor = Colors.redAccent;
+      mainIcon = Icons.campaign_rounded;
+      headerTitle = "Lost Item Report";
+    } else if (mode == 2) {
+      themeColor = Colors.teal;
+      mainIcon = Icons.import_contacts_rounded;
+      headerTitle = "Book Exchange";
+    } else {
+      themeColor = _getCategoryColor(data['category'] ?? "Other");
+      if (themeColor == const Color(0xFFF8FAFC)) themeColor = Colors.grey;
+      mainIcon = _getIconForCategory(data['category']);
+      headerTitle = data['category'] ?? "Item Details";
+    }
+
+    Color iconColor = mode == 0
+        ? _getIconColor(data['category'])
+        : Colors.white;
+    Color appBarColor = mode == 0 ? Colors.white : themeColor;
+    Color appBarIconColor = mode == 0 ? Colors.black : Colors.white;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: themeColor,
+        backgroundColor: appBarColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isLostItem ? Colors.white : Colors.black,
-          ),
+          icon: Icon(Icons.arrow_back, color: appBarIconColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isLostItem ? "Lost Item Report" : category,
-          style: TextStyle(
-            color: isLostItem ? Colors.white : iconColor,
-            fontWeight: FontWeight.bold,
-          ),
+          headerTitle,
+          style: TextStyle(color: appBarIconColor, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -840,19 +943,18 @@ class ProductDetailsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // HERO HEADER
             Container(
               height: 200,
-              color: themeColor,
+              color: mode == 0
+                  ? _getCategoryColor(data['category'])
+                  : themeColor,
               child: Center(child: Icon(mainIcon, size: 100, color: iconColor)),
             ),
-
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // TIME & BADGE ROW
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -866,23 +968,29 @@ class ProductDetailsPage extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: isLostItem ? Colors.red[50] : Colors.blue[50],
+                          color: mode == 1
+                              ? Colors.red[50]
+                              : (mode == 2 ? Colors.teal[50] : Colors.blue[50]),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              isLostItem ? Icons.warning : Icons.verified,
+                              mode == 1 ? Icons.warning : Icons.verified,
                               size: 16,
-                              color: isLostItem ? Colors.red : Colors.blue,
+                              color: mode == 1
+                                  ? Colors.red
+                                  : (mode == 2 ? Colors.teal : Colors.blue),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isLostItem ? "Lost Alert" : "Verified Student",
+                              mode == 1 ? "Lost Alert" : "Student Listed",
                               style: TextStyle(
-                                color: isLostItem
+                                color: mode == 1
                                     ? Colors.red
-                                    : Colors.blue[800],
+                                    : (mode == 2
+                                          ? Colors.teal[800]
+                                          : Colors.blue[800]),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -893,8 +1001,6 @@ class ProductDetailsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 15),
-
-                  // TITLE
                   Text(
                     data['title'],
                     style: const TextStyle(
@@ -904,9 +1010,7 @@ class ProductDetailsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // PRICE OR LOCATION (Depending on mode)
-                  if (!isLostItem)
+                  if (mode == 0)
                     Text(
                       "₹${data['price']}",
                       style: const TextStyle(
@@ -915,7 +1019,7 @@ class ProductDetailsPage extends StatelessWidget {
                         color: Colors.green,
                       ),
                     )
-                  else
+                  else if (mode == 1)
                     Row(
                       children: [
                         const Icon(Icons.pin_drop, color: Colors.redAccent),
@@ -929,13 +1033,47 @@ class ProductDetailsPage extends StatelessWidget {
                           ),
                         ),
                       ],
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "By ${data['author']}",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.teal[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.teal.shade100),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.swap_horiz, color: Colors.teal),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "Wants: ${data['exchange_with']}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal[900],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-
                   const SizedBox(height: 30),
                   const Divider(),
                   const SizedBox(height: 20),
-
-                  // FULL DESCRIPTION
                   const Text(
                     "Description",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -949,17 +1087,12 @@ class ProductDetailsPage extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-                  const Divider(),
                 ],
               ),
             ),
           ],
         ),
       ),
-
-      // BOTTOM ACTION BUTTON
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -974,26 +1107,35 @@ class ProductDetailsPage extends StatelessWidget {
         ),
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isLostItem
+            backgroundColor: mode == 1
                 ? Colors.redAccent
-                : const Color(0xFF25D366),
+                : (mode == 2 ? Colors.teal : const Color(0xFF25D366)),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
             ),
           ),
-          onPressed: () => _contactSeller(
-            data['contact'],
-            isLostItem
-                ? "I found your item: ${data['title']}"
-                : "Hi, I am interested in your item: ${data['title']}",
-          ),
+          onPressed: () {
+            String msg = "";
+            if (mode == 0)
+              msg = "Hi, I am interested in buying: ${data['title']}";
+            else if (mode == 1)
+              msg = "I found your item: ${data['title']}";
+            else
+              msg =
+                  "Hi, I want to trade for your book: ${data['title']}. I have: ...";
+            _contactSeller(data['contact'], msg);
+          },
           icon: Icon(
-            isLostItem ? Icons.check_circle : Icons.chat_bubble_outline,
+            mode == 1
+                ? Icons.check_circle
+                : (mode == 2 ? Icons.swap_calls : Icons.chat_bubble_outline),
           ),
           label: Text(
-            isLostItem ? "I Found This Item" : "Chat on WhatsApp",
+            mode == 1
+                ? "I Found This Item"
+                : (mode == 2 ? "Propose Exchange" : "Chat on WhatsApp"),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
