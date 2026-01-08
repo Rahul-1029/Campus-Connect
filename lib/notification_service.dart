@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../api_key.dart';
+import 'api_key.dart';
 
 class NotificationService {
-  // 1. SUBSCRIBE: Save Personal Email to Firestore
-  static Future<void> subscribeToAlerts(String personalEmail) async {
+  // 1. SUBSCRIBE
+  // Returns TRUE if subscribed successfully
+  // Returns FALSE if already subscribed
+  static Future<bool> subscribeToAlerts(String personalEmail) async {
     final email = personalEmail.trim().toLowerCase();
 
-    // Check if already exists to avoid duplicates
     final query = await FirebaseFirestore.instance
         .collection('subscribers')
         .where('email', isEqualTo: email)
@@ -19,13 +20,36 @@ class NotificationService {
         'email': email,
         'timestamp': FieldValue.serverTimestamp(),
       });
+      return true; // Successfully subscribed
+    } else {
+      return false; // Already exists
     }
   }
 
-  // 2. NOTIFY: Send Email to All Subscribers
+  // 2. UNSUBSCRIBE
+  // Returns TRUE if unsubscribed successfully
+  // Returns FALSE if email was not found (not subscribed)
+  static Future<bool> unsubscribeFromAlerts(String personalEmail) async {
+    final email = personalEmail.trim().toLowerCase();
+
+    final query = await FirebaseFirestore.instance
+        .collection('subscribers')
+        .where('email', isEqualTo: email)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      for (var doc in query.docs) {
+        await doc.reference.delete();
+      }
+      return true; // Successfully deleted
+    } else {
+      return false; // Email not found
+    }
+  }
+
+  // 3. NOTIFY (No changes here)
   static Future<void> sendNewPostAlert(String title, String category) async {
     try {
-      // A. Fetch all subscriber emails
       final snapshot = await FirebaseFirestore.instance
           .collection('subscribers')
           .get();
@@ -35,13 +59,8 @@ class NotificationService {
 
       if (emails.isEmpty) return;
 
-      // B. Send Email via EmailJS (REST API)
-      // NOTE: For the Hackathon, sign up at emailjs.com (Free) to get these keys.
-      // If you don't have keys yet, this will just print to console (safe for demo).
-
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
 
-      // Loop to send (For production, use a 'Distribution List' feature, but this works for MVPs)
       for (String recipient in emails) {
         await http.post(
           url,
@@ -60,7 +79,6 @@ class NotificationService {
           }),
         );
       }
-      print("Alerts sent to ${emails.length} subscribers.");
     } catch (e) {
       print("Notification Error: $e");
     }

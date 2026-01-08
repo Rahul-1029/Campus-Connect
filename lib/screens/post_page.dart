@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../api_key.dart';
-import '../notification_service.dart'; // Import the service
+import '../notification_service.dart';
 
 class PostPage extends StatefulWidget {
   const PostPage({super.key});

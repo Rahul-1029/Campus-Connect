@@ -81,18 +81,18 @@ class _HomePageState extends State<HomePage> {
     "Other",
   ];
 
-  // --- NEW: SUBSCRIBE DIALOG ---
+  // --- SUBSCRIBE/UNSUBSCRIBE DIALOG ---
   void _showSubscribeDialog() {
     final emailController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Get Email Alerts 🔔"),
+        title: const Text("Email Alerts Settings 🔔"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              "Enter your PERSONAL email (Gmail, etc.) to get notified when students post new items.",
+              "Enter your personal email to Subscribe or Unsubscribe from new post alerts.",
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 15),
@@ -108,21 +108,70 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          // CANCEL
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
           ),
+
+          // UNSUBSCRIBE BUTTON
+          TextButton(
+            onPressed: () async {
+              if (emailController.text.isNotEmpty) {
+                // Call the service and get the result
+                bool isUnsubscribed =
+                    await NotificationService.unsubscribeFromAlerts(
+                      emailController.text,
+                    );
+
+                if (mounted) {
+                  Navigator.pop(context); // Close dialog
+
+                  // Show appropriate message
+                  if (isUnsubscribed) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Successfully unsubscribed."),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("You are not subscribed.")),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text(
+              "Unsubscribe",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+
+          // SUBSCRIBE BUTTON
           ElevatedButton(
             onPressed: () async {
               if (emailController.text.isNotEmpty) {
-                await NotificationService.subscribeToAlerts(
+                // Call the service and get the result
+                bool isSubscribed = await NotificationService.subscribeToAlerts(
                   emailController.text,
                 );
+
                 if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Subscribed for alerts!")),
-                  );
+                  Navigator.pop(context); // Close dialog
+
+                  // Show appropriate message
+                  if (isSubscribed) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Successfully subscribed!")),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("You are already subscribed."),
+                      ),
+                    );
+                  }
                 }
               }
             },
