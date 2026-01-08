@@ -226,10 +226,9 @@ class _PostPageState extends State<PostPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Required';
                   final email = value.toLowerCase().trim();
-                  // Allow Gmail for testing + College Mail
-                  if (!email.endsWith('@gmail.com') &&
-                      !email.endsWith('@mvgrce.edu.in')) {
-                    return 'Use @gmail.com or @mvgrce.edu.in';
+
+                  if (!email.endsWith('@mvgrce.edu.in')) {
+                    return 'Official college mail required (@mvgrce.edu.in)';
                   }
                   return null;
                 },
