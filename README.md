@@ -1,32 +1,34 @@
 # Campus Connect 🎓
 
-**Campus Connect** is a dedicated student marketplace and utility app designed for **MVGR College of Engineering**. It serves as a unified platform for students to buy/sell items, report lost belongings, and exchange books within the campus community.
+**Campus Connect** is a centralized, verified student marketplace and utility platform designed exclusively for **MVGR College of Engineering**. It bridges the gap between students for buying/selling items, recovering lost belongings, and exchanging books, all secured by college email verification.
 
-## 🚀 Features
+## 🚀 Key Features
 
 ### 1. Student Marketplace 🛒
-* **Buy & Sell:** Students can list items like books, electronics, lab coats, and tools.
-* **Category Filtering:** Filter items by category (Books, Electronics, Lab Coat, etc.).
-* **Direct WhatsApp Integration:** Buyers can chat with sellers directly via WhatsApp with a single click.
-* **Secure Deletion:** Sellers create a unique 4-digit PIN to delete their posts after a sale.
+* **Buy & Sell:** A classifieds section for students to list used items like electronics, lab coats, and drafters.
+* **Category Filtering:** Easily browse by categories (Books, Electronics, Tools, etc.).
+* **WhatsApp Integration:** Direct "Chat with Seller" button to initiate negotiations instantly.
 
-### 2. Lost & Found Report 🔍
-* **Dedicated Section:** A distinct UI designed to look like "Urgent Sticky Notes" to grab attention.
-* **Location Tracking:** Reports include a "Last Seen" location field.
-* **One-Tap Claim:** Finders can click "I Found This Item" to instantly notify the owner via WhatsApp.
+### 2. Lost & Found Hub 🔍
+* **Urgent Reporting:** A dedicated "Sticky Note" interface for reporting lost items.
+* **Location Tracking:** Includes "Last Seen" fields to help recover items faster.
+* **One-Tap Claim:** Finders can instantly notify the owner via WhatsApp.
 
-### 3. Book Exchange Hub 📚
-* **Library Card Aesthetics:** A beautiful, custom-designed UI for book trading.
-* **Trade Requests:** Instead of prices, users specify what they want in return (e.g., "Trading 'Data Structures' for 'Python Crash Course'").
-* **Optimized for Students:** Encourages a cashless, knowledge-sharing economy.
+### 3. Book Exchange (Barter System) 📚
+* **Cashless Trading:** A "Library Card" style interface designed for swapping books rather than selling them.
+* **Trade Requests:** Users specify what they want in return (e.g., "Trading 'Data Structures' for 'Python Crash Course'").
 
-### 4. AI-Powered Assistant ✨
-* **Auto-Descriptions:** Integrated with the **Gemini 2.5 Flash Lite API**.
-* **Smart Writing:** Users can type a title (e.g., "Scientific Calculator") and click **"AI Write"** to generate a catchy, persuasive sales pitch or exchange description automatically.
+### 4. AI-Powered Writing Assistant ✨
+* **Gemini Integration:** Powered by the **Google Gemini 2.5 Flash Lite API**.
+* **Smart Descriptions:** Users can simply enter a title (e.g., "Scientific Calculator"), and the AI auto-generates a persuasive, professional sales pitch or lost item description.
 
-### 5. Verification & Security 🔐
-* **College Email Verification:** Ensures only verified students (using `@mvgrce.edu.in` or permitted domains) can post.
-* **PIN Protection:** Every post is secured with a user-defined PIN to prevent unauthorized deletions.
+### 5. Smart Email Notifications 🔔
+* **Subscriber Model:** Users can subscribe with their personal email (Gmail, etc.) to receive alerts.
+* **Real-Time Alerts:** When a new item is posted in *any* category (Market, Lost, or Exchange), subscribers receive an instant email notification via **EmailJS**.
+
+### 6. Security & Verification 🔐
+* **Strict College Authentication:** Sign-ups and posts are restricted to verified `@mvgrce.edu.in` email addresses only.
+* **PIN Protection:** Every post is secured with a user-defined 4-digit PIN to prevent unauthorized deletions.
 
 ---
 
@@ -35,19 +37,20 @@
 * **Frontend:** Flutter (Dart)
 * **Backend:** Firebase Firestore (NoSQL Database)
 * **Authentication:** Firebase Auth (Email Link Verification)
-* **AI Integration:** Google Gemini API (REST HTTP implementation)
-* **State Management:** `setState` (Clean & efficient for this scale)
+* **AI Engine:** Google Gemini API (REST HTTP)
+* **Notifications:** EmailJS (REST API)
 
 ---
 
 ## 📂 Project Structure
 
-* `lib/main.dart`: Entry point and Firebase initialization.
-* `lib/home_page.dart`: The core dashboard containing the **Three-Mode Toggle** (Market, Lost, Exchange) and the dynamic GridView.
-* `lib/post_page.dart`: Form for selling items with AI description generation.
+* `lib/main.dart`: App entry point and Firebase initialization.
+* `lib/home_page.dart`: Main dashboard with the **3-Way Toggle** (Market/Lost/Exchange) and Subscription feature.
+* `lib/post_page.dart`: Marketplace listing form with AI and strict email validation.
 * `lib/exchange_post_page.dart`: Specialized form for the Book Exchange feature.
 * `lib/report_lost_page.dart`: Form for reporting lost items.
-* `lib/api_key.dart`: Secure storage for the Gemini API key.
+* `lib/notification_service.dart`: Handles EmailJS integration and subscriber management.
+* `lib/api_key.dart`: Stores the Gemini API Key.
 
 ---
 
@@ -64,17 +67,15 @@
     flutter pub get
     ```
 
-3.  **Firebase Setup**
+3.  **Firebase Configuration**
     * Create a project in the Firebase Console.
-    * Add your `google-services.json` (Android) or `GoogleService-Info.plist` (iOS) to the respective folders.
-    * Enable **Authentication** (Email/Password) and **Firestore Database**.
+    * Add `google-services.json` (Android) or `GoogleService-Info.plist` (iOS).
+    * Enable **Firestore Database** and **Authentication** (Email/Password).
 
-4.  **API Key Configuration**
-    * Get your API key from Google AI Studio.
-    * Create a file `lib/api_key.dart`:
-        ```dart
-        const String geminiApiKey = "YOUR_API_KEY_HERE";
-        ```
+4.  **API Keys Setup**
+    * **Gemini API:** Get your key from Google AI Studio.
+    * **EmailJS:** Create an account at emailjs.com, create a Service and Template, and get your User ID.
+    * Update `lib/api_key.dart` and `lib/notification_service.dart` with your respective keys.
 
 5.  **Run the App**
     ```bash
@@ -83,10 +84,11 @@
 
 ---
 
-## 🤝 Contribution
+## 🤝 Team
 
-This project is built by **Visionary Variables** for the MVGR student community.
-**Team Lead:** Rahul Attili
+**Team Name:** Visionary Variables
+**Lead:** Rahul Attili
+**Project:** Built for the GDG On Campus TechSprint.
 
 ---
 

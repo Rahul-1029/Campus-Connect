@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'dart:convert'; // For JSON
-import 'package:http/http.dart' as http; // For Direct API Call
-import '../api_key.dart'; // Keep your key file!
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../api_key.dart';
+import '../notification_service.dart'; // Import the service
 
 class PostPage extends StatefulWidget {
   const PostPage({super.key});
@@ -20,13 +21,10 @@ class _PostPageState extends State<PostPage> {
   final nameController = TextEditingController();
   final pinController = TextEditingController();
   final emailController = TextEditingController();
-
-  // --- 1. RESTORED DESCRIPTION CONTROLLER ---
   final descriptionController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
 
-  // Categories (No Drafters)
   String selectedCategory = "Books";
   final List<String> categories = [
     "Books",
@@ -37,7 +35,7 @@ class _PostPageState extends State<PostPage> {
   ];
 
   bool _isVerifying = false;
-  bool _isGeneratingAI = false; // Spinner for AI
+  bool _isGeneratingAI = false;
   Timer? _timer;
 
   @override
@@ -46,7 +44,6 @@ class _PostPageState extends State<PostPage> {
     super.dispose();
   }
 
-  // --- 2. THE DIRECT HTTP AI LOGIC (Reliable & Simple) ---
   Future<void> _generateDescription() async {
     if (titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -58,13 +55,11 @@ class _PostPageState extends State<PostPage> {
     setState(() => _isGeneratingAI = true);
 
     try {
-      // Clean key and prepare URL
       final cleanKey = geminiApiKey.trim();
       final url = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=$cleanKey',
       );
 
-      // The Prompt
       final headers = {'Content-Type': 'application/json'};
       final body = jsonEncode({
         "contents": [
@@ -79,7 +74,6 @@ class _PostPageState extends State<PostPage> {
         ],
       });
 
-      // The Call
       final response = await http.post(url, headers: headers, body: body);
 
       if (response.statusCode == 200) {
@@ -91,7 +85,6 @@ class _PostPageState extends State<PostPage> {
           _isGeneratingAI = false;
         });
       } else {
-        print("Google Error: ${response.body}");
         throw Exception("Failed to generate description");
       }
     } catch (e) {
@@ -102,7 +95,6 @@ class _PostPageState extends State<PostPage> {
     }
   }
 
-  // --- EXISTING VERIFICATION LOGIC ---
   Future<void> _handlePost() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -183,24 +175,36 @@ class _PostPageState extends State<PostPage> {
   }
 
   Future<void> _uploadData() async {
-    await FirebaseFirestore.instance.collection('listings').add({
-      'title': titleController.text,
-      'description': descriptionController.text, // --- SAVING DESCRIPTION ---
-      'price': priceController.text,
-      'contact': contactController.text,
-      'seller': nameController.text,
-      'email': emailController.text,
-      'deletePin': pinController.text,
-      'category': selectedCategory,
-      'isVerified': true,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    try {
+      await FirebaseFirestore.instance.collection('listings').add({
+        'title': titleController.text,
+        'description': descriptionController.text,
+        'price': priceController.text,
+        'contact': contactController.text,
+        'seller': nameController.text,
+        'email': emailController.text,
+        'deletePin': pinController.text,
+        'category': selectedCategory,
+        'isVerified': true,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
-    if (mounted) {
+      // --- SEND NOTIFICATION ---
+      await NotificationService.sendNewPostAlert(
+        titleController.text,
+        selectedCategory,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Verified & Posted!")));
+        Navigator.pop(context);
+      }
+    } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Verified & Posted!")));
-      Navigator.pop(context);
+      ).showSnackBar(SnackBar(content: Text("Upload Error: $e")));
     }
   }
 
@@ -226,7 +230,7 @@ class _PostPageState extends State<PostPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Required';
                   final email = value.toLowerCase().trim();
-
+                  // STRICT VERIFICATION
                   if (!email.endsWith('@mvgrce.edu.in')) {
                     return 'Official college mail required (@mvgrce.edu.in)';
                   }
@@ -261,7 +265,7 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 10),
 
-              // --- 3. TITLE & AI BUTTON ---
+              // TITLE
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -276,8 +280,6 @@ class _PostPageState extends State<PostPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-
-                  // AI BUTTON (Direct HTTP)
                   SizedBox(
                     height: 55,
                     child: ElevatedButton.icon(
@@ -302,7 +304,7 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 10),
 
-              // --- 4. DESCRIPTION FIELD ---
+              // DESCRIPTION
               TextFormField(
                 controller: descriptionController,
                 maxLines: 3,
@@ -358,7 +360,7 @@ class _PostPageState extends State<PostPage> {
               ),
               const SizedBox(height: 20),
 
-              // SUBMIT BUTTON
+              // BUTTON
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),

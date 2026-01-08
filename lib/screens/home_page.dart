@@ -4,6 +4,7 @@ import 'dart:html' as html;
 import 'post_page.dart';
 import 'report_lost_page.dart';
 import 'exchange_post_page.dart';
+import '../notification_service.dart'; // Import the new service
 
 // --- GLOBAL HELPER FUNCTIONS ---
 Color _getCategoryColor(String? category) {
@@ -79,6 +80,58 @@ class _HomePageState extends State<HomePage> {
     "Tools",
     "Other",
   ];
+
+  // --- NEW: SUBSCRIBE DIALOG ---
+  void _showSubscribeDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Get Email Alerts 🔔"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Enter your PERSONAL email (Gmail, etc.) to get notified when students post new items.",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: "Personal Email",
+                hintText: "example@gmail.com",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (emailController.text.isNotEmpty) {
+                await NotificationService.subscribeToAlerts(
+                  emailController.text,
+                );
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Subscribed for alerts!")),
+                  );
+                }
+              }
+            },
+            child: const Text("Subscribe"),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showDeleteConfirmation(
     BuildContext context,
@@ -273,43 +326,73 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text("Visionary Variables"),
-                              content: const Text(
-                                "Built with ❤️ for MVGR.\n\nTeam Lead: Rahul Attili\nStatus: Offline Mode Active",
+
+                      // --- ACTIONS ROW ---
+                      Row(
+                        children: [
+                          // 1. SUBSCRIBE BUTTON (NEW)
+                          GestureDetector(
+                            onTap: _showSubscribeDialog,
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 10),
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
                               ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text("Close"),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.yellow[100],
+                                radius: 24,
+                                child: Icon(
+                                  Icons.notifications_active_rounded,
+                                  color: Colors.orange[900],
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.grey[100],
-                            radius: 24,
-                            child: Icon(
-                              Icons.info_outline_rounded,
-                              color: Colors.blue[900],
+                              ),
                             ),
                           ),
-                        ),
+
+                          // 2. INFO BUTTON
+                          GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text("Visionary Variables"),
+                                  content: const Text(
+                                    "Built with ❤️ for MVGR.\n\nTeam Lead: Rahul Attili\nStatus: Offline Mode Active",
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text("Close"),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.grey[100],
+                                radius: 24,
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  color: Colors.blue[900],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // TOGGLE SWITCH
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
@@ -324,6 +407,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 15),
+
+                  // SEARCH
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
@@ -344,6 +429,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 15),
+
+                  // FILTERS
                   if (_viewMode == 0)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -390,6 +477,8 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+
+            // GRID CONTENT
             Expanded(
               child: StreamBuilder(
                 stream: currentStream,
@@ -542,7 +631,7 @@ class _HomePageState extends State<HomePage> {
                         );
                       }
 
-                      // === 2. BOOK EXCHANGE CARD (Updated Design) ===
+                      // === 2. BOOK EXCHANGE CARD ===
                       if (_viewMode == 2) {
                         return GestureDetector(
                           onLongPress: () => _showDeleteConfirmation(
@@ -563,9 +652,7 @@ class _HomePageState extends State<HomePage> {
                           child: Container(
                             clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFF0FDF4,
-                              ), // Teal/Green background
+                              color: const Color(0xFFF0FDF4),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: Colors.teal.shade100,
@@ -581,7 +668,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: Stack(
                               children: [
-                                // BACKGROUND WATERMARK (Fills space)
                                 Positioned(
                                   right: -20,
                                   top: 40,
@@ -589,19 +675,17 @@ class _HomePageState extends State<HomePage> {
                                     angle: -0.2,
                                     child: Icon(
                                       Icons.auto_stories_rounded,
-                                      size: 140, // Huge icon
+                                      size: 140,
                                       color: Colors.teal.withOpacity(0.15),
                                     ),
                                   ),
                                 ),
-
                                 Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // 1. TOP BADGE
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
@@ -624,24 +708,19 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       ),
                                       const Spacer(flex: 1),
-
-                                      // 2. BIG SERIF TITLE
                                       Text(
                                         data['title'],
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontFamily:
-                                              'Serif', // Looks more like a book
+                                          fontFamily: 'Serif',
                                           fontWeight: FontWeight.w900,
-                                          fontSize: 22, // Larger font
+                                          fontSize: 22,
                                           color: Colors.teal[900],
                                           height: 1.1,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-
-                                      // 3. AUTHOR (Italic)
                                       Text(
                                         "by ${data['author'] ?? 'Unknown'}",
                                         maxLines: 1,
@@ -653,8 +732,6 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       ),
                                       const Spacer(flex: 2),
-
-                                      // 4. "WANTS" BOX (Sticky note style)
                                       Container(
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(10),

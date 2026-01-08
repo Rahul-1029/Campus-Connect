@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../notification_service.dart';
 
 class ReportLostPage extends StatefulWidget {
   const ReportLostPage({super.key});
@@ -34,6 +35,11 @@ class _ReportLostPageState extends State<ReportLostPage> {
         'timestamp': FieldValue.serverTimestamp(),
         'isFound': false,
       });
+
+      await NotificationService.sendNewPostAlert(
+        titleController.text.trim(),
+        "Lost", // This is the category name people will see in email
+      );
 
       if (mounted) {
         Navigator.pop(context);

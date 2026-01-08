@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../api_key.dart'; // Ensure this path is correct for your project
+import '../api_key.dart';
+import '../notification_service.dart';
 
 class ExchangePostPage extends StatefulWidget {
   const ExchangePostPage({super.key});
@@ -94,6 +95,11 @@ class _ExchangePostPageState extends State<ExchangePostPage> {
         'timestamp': FieldValue.serverTimestamp(),
         'category': 'Exchange', // Helper for UI
       });
+
+      await NotificationService.sendNewPostAlert(
+        titleController.text.trim(),
+        "Book Exchange", // Category name for the email
+      );
 
       if (mounted) {
         Navigator.pop(context);
